@@ -11,7 +11,7 @@
             "fkooman\\Rest\\Plugin\\Authentication\\Form\\": "src/"
         }
     },
-    "description": "Simple HTML Form Authentication plugin for fkooman/rest",
+    "description": "HTML Form Authentication plugin for fkooman/rest",
     "license": "Apache-2.0",
     "name": "fkooman/rest-plugin-authentication-form",
     "require": {
