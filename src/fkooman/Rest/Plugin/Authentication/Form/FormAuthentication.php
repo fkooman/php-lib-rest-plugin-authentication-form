@@ -161,7 +161,7 @@ class FormAuthentication implements AuthenticationPluginInterface
         $response = new Response();
         $response->setHeader('X-Frame-Options', 'DENY');
         // XXX make sure the quotes are not required in the header below
-        $response->setHeader('Content-Security-Policy', 'default-src "self"');
+        $response->setHeader('Content-Security-Policy', "default-src 'self'");
         $response->setBody(
             $this->templateManager->render(
                 'formAuth',

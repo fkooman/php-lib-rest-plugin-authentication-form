@@ -58,7 +58,7 @@ class FormAuthenticationTest extends PHPUnit_Framework_TestCase
                 'HTTP/1.1 200 OK',
                 'Content-Type: text/html;charset=UTF-8',
                 'X-Frame-Options: DENY',
-                'Content-Security-Policy: default-src "self"',
+                "Content-Security-Policy: default-src 'self'",
                 'Content-Length: 33',
                 '',
                 '{"formAuth":{"login_hint":"foo"}}',
