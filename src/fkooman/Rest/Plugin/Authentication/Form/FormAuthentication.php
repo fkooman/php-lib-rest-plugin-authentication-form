@@ -90,30 +90,28 @@ class FormAuthentication implements AuthenticationPluginInterface
             $this->session = new Session('Form');
         }
 
-        $compatThis = &$this;
-
         $service->post(
             '/_auth/form/verify',
-            function (Request $request) use ($compatThis) {
+            function (Request $request) {
                 // delete possibly stale auth session
-                $compatThis->session->delete('userName');
+                $this->session->delete('userName');
 
                 // validate password
                 $userName = $request->getPostParameter('userName');
                 $userPass = $request->getPostParameter('userPass');
                 // XXX validate username/password syntax
 
-                $passHash = call_user_func($compatThis->retrieveHash, $userName);
+                $passHash = call_user_func($this->retrieveHash, $userName);
                 if (false === $passHash || !password_verify($userPass, $passHash)) {
                     $e = new UnauthorizedException(
                         'invalid_credentials',
                         'provided credentials not valid'
                     );
-                    $e->addScheme('Form', $compatThis->authParams);
+                    $e->addScheme('Form', $this->authParams);
                     throw $e;
                 }
 
-                $compatThis->session->set('userName', $userName);
+                $this->session->set('userName', $userName);
 
                 // redirect to referrer
                 // XXX check for non null referer!
@@ -128,8 +126,8 @@ class FormAuthentication implements AuthenticationPluginInterface
 
         $service->post(
             '/_auth/form/logout',
-            function (Request $request) use ($compatThis) {
-                $compatThis->session->destroy();
+            function (Request $request) {
+                $this->session->destroy();
                 $redirectTo = self::validateRedirectTo($request->getUrl()->getRootUrl(), $request->getUrl()->getQueryParameter('redirect_to'));
 
                 return new RedirectResponse($redirectTo, 302);
