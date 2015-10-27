@@ -128,7 +128,7 @@ class FormAuthentication implements AuthenticationPluginInterface
             '/_auth/form/logout',
             function (Request $request) {
                 $this->session->destroy();
-                $redirectTo = self::validateRedirectTo($request->getUrl()->getRootUrl(), $request->getUrl()->getQueryParameter('redirect_to'));
+                $redirectTo = self::validateRedirectTo($request->getUrl()->getRootUrl(), $request->getPostParameter('redirect_to'));
 
                 return new RedirectResponse($redirectTo, 302);
             },
