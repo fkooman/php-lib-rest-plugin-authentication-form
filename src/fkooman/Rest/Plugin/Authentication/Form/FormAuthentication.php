@@ -26,6 +26,7 @@ use fkooman\Http\Response;
 use fkooman\Http\RedirectResponse;
 use InvalidArgumentException;
 use fkooman\Http\Exception\UnauthorizedException;
+use fkooman\Http\Exception\BadRequestException;
 
 class FormAuthentication implements AuthenticationPluginInterface
 {

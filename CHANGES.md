@@ -1,5 +1,8 @@
 # Release History
 
+## 1.0.2 (...)
+- forgot to use `BadRequestException`
+
 ## 1.0.1 (2015-10-27)
 - fix a small bug where logout expects a query parameter for `redirect_to`
 
