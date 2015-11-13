@@ -75,9 +75,8 @@ class FormAuthentication implements AuthenticationPluginInterface
             return true;
         }
 
-        // XXX FALSE when not authenticated and not a POST to try to authenticate
-        // for now, always attempt
-        return true;
+        // if we are not logged in, assume we are not trying...
+        return false;
     }
 
     public function setSession(Session $session)
@@ -100,7 +99,6 @@ class FormAuthentication implements AuthenticationPluginInterface
                 // validate password
                 $userName = $request->getPostParameter('userName');
                 $userPass = $request->getPostParameter('userPass');
-                // XXX validate username/password syntax
 
                 $passHash = call_user_func($this->retrieveHash, $userName);
                 if (false === $passHash || !password_verify($userPass, $passHash)) {
@@ -114,10 +112,12 @@ class FormAuthentication implements AuthenticationPluginInterface
 
                 $this->session->set('userName', $userName);
 
-                // redirect to referrer
-                // XXX check for non null referer!
-                //die($request->getHeader('Referer'));
-                return new RedirectResponse($request->getHeader('Referer'), 302);
+                $httpReferrer = $request->getHeader('Referer');
+                if (null === $httpReferrer) {
+                    throw new BadRequestException('Referrer header not sent');
+                }
+
+                return new RedirectResponse($httpReferrer, 302);
             },
             array(
                 __CLASS__ => array('enabled' => false),
@@ -143,7 +143,6 @@ class FormAuthentication implements AuthenticationPluginInterface
     public function execute(Request $request, array $routeConfig)
     {
         $userId = $this->session->get('userName');
-
         if (null !== $userId) {
             return new FormUserInfo($userId);
         }
@@ -156,12 +155,9 @@ class FormAuthentication implements AuthenticationPluginInterface
             }
         }
 
-        // required, but not yet authenticated
-        // show auth dialog 
-        // XXX should we return a 401 instead of 200?
-        $response = new Response();
+        // required, but not yet authenticated, show auth dialog 
+        $response = new Response(200);  // XXX use 401 instead?
         $response->setHeader('X-Frame-Options', 'DENY');
-        // XXX make sure the quotes are not required in the header below
         $response->setHeader('Content-Security-Policy', "default-src 'self'");
         $response->setBody(
             $this->templateManager->render(

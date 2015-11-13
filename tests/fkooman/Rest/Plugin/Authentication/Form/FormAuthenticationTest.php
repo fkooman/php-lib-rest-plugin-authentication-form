@@ -67,6 +67,54 @@ class FormAuthenticationTest extends PHPUnit_Framework_TestCase
         );
     }
 
+    public function testAuthenticationAttemptWithoutReferrer()
+    {
+        $tpl = new TestTemplateManager();
+        $formAuth = new FormAuthentication(
+            function ($userId) {
+                return '$2y$10$L/pq7XXpV54.iAk2EE74deR4yR54yEaZb92.gxH2jDEAZkpcWbhiW'; // bar
+            },
+            $tpl
+        );
+        $sessionStub = $this->getMockBuilder('fkooman\Http\Session')
+                     ->disableOriginalConstructor()
+                     ->getMock();
+        $sessionStub->method('get')->will($this->returnValue(null));
+        $formAuth->setSession($sessionStub);
+
+        $service = new Service();
+        $formAuth->init($service);
+
+        $request = new Request(
+            array(
+                'SERVER_NAME' => 'www.example.org',
+                'SERVER_PORT' => 80,
+                'QUERY_STRING' => '',
+                'REQUEST_URI' => '/_auth/form/verify',
+                'SCRIPT_NAME' => '/index.php',
+                'PATH_INFO' => '/_auth/form/verify',
+                'REQUEST_METHOD' => 'POST',
+            ),
+            array(
+                'userName' => 'foo',
+                'userPass' => 'bar',
+            )
+        );
+
+        $response = $service->run($request);
+
+        $this->assertSame(
+            array(
+                'HTTP/1.1 400 Bad Request',
+                'Content-Type: application/json',
+                'Content-Length: 36',
+                '',
+                '{"error":"Referrer header not sent"}',
+            ),
+            $response->toArray()
+        );
+    }
+
     public function testAuthenticationAttempt()
     {
         $tpl = new TestTemplateManager();
@@ -111,6 +159,56 @@ class FormAuthenticationTest extends PHPUnit_Framework_TestCase
                 'Location: https://app.example.org/',
                 '',
                 '',
+            ),
+            $response->toArray()
+        );
+    }
+
+    public function testAuthenticationAttemptWrongPassword()
+    {
+        $tpl = new TestTemplateManager();
+        $formAuth = new FormAuthentication(
+            function ($userId) {
+                return '$2y$10$L/pq7XXpV54.iAk2EE74deR4yR54yEaZb92.gxH2jDEAZkpcWbhiW'; // bar
+            },
+            $tpl
+        );
+        $sessionStub = $this->getMockBuilder('fkooman\Http\Session')
+                     ->disableOriginalConstructor()
+                     ->getMock();
+        $sessionStub->method('get')->will($this->returnValue(null));
+        $formAuth->setSession($sessionStub);
+
+        $service = new Service();
+        $formAuth->init($service);
+
+        $request = new Request(
+            array(
+                'SERVER_NAME' => 'www.example.org',
+                'SERVER_PORT' => 80,
+                'QUERY_STRING' => '',
+                'REQUEST_URI' => '/_auth/form/verify',
+                'SCRIPT_NAME' => '/index.php',
+                'PATH_INFO' => '/_auth/form/verify',
+                'REQUEST_METHOD' => 'POST',
+                'HTTP_REFERER' => 'https://app.example.org/',
+            ),
+            array(
+                'userName' => 'foo',
+                'userPass' => 'wr0ng',
+            )
+        );
+
+        $response = $service->run($request);
+
+        $this->assertSame(
+            array(
+                'HTTP/1.1 401 Unauthorized',
+                'Content-Type: application/json',
+                'Content-Length: 84',
+                'Www-Authenticate: Form realm="Protected Resource"',
+                '',
+                '{"error":"invalid_credentials","error_description":"provided credentials not valid"}',
             ),
             $response->toArray()
         );
