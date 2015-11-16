@@ -59,29 +59,18 @@ class FormAuthentication implements AuthenticationPluginInterface
         $this->authParams = $authParams;
     }
 
-    public function getScheme()
-    {
-        return 'Form';
-    }
-
-    public function getAuthParams()
-    {
-        return $this->authParams;
-    }
-
-    public function isAttempt(Request $request)
-    {
-        if (null !== $this->session->get('userName')) {
-            return true;
-        }
-
-        // if we are not logged in, assume we are not trying...
-        return false;
-    }
-
     public function setSession(Session $session)
     {
         $this->session = $session;
+    }
+
+    public function isAuthenticated(Request $request)
+    {
+        if (null !== $this->session->get('userName')) {
+            return new FormUserInfo($this->session->get('userName'));
+        }
+
+        return false;
     }
 
     public function init(Service $service)
@@ -93,6 +82,11 @@ class FormAuthentication implements AuthenticationPluginInterface
         $service->post(
             '/_auth/form/verify',
             function (Request $request) {
+                $httpReferrer = $request->getHeader('Referer');
+                if (null === $httpReferrer) {
+                    throw new BadRequestException('Referrer header not sent');
+                }
+
                 // delete possibly stale auth session
                 $this->session->delete('userName');
 
@@ -102,25 +96,14 @@ class FormAuthentication implements AuthenticationPluginInterface
 
                 $passHash = call_user_func($this->retrieveHash, $userName);
                 if (false === $passHash || !password_verify($userPass, $passHash)) {
-                    $e = new UnauthorizedException(
-                        'invalid_credentials',
-                        'provided credentials not valid'
-                    );
-                    $e->addScheme('Form', $this->authParams);
-                    throw $e;
+                    // XXX: use proper query parameter appending, could also be '&'!
+                    return new RedirectResponse($httpReferrer . '?_auth_form_verify=invalid_credentials', 302);
                 }
 
                 $this->session->set('userName', $userName);
-
-                $httpReferrer = $request->getHeader('Referer');
-                if (null === $httpReferrer) {
-                    throw new BadRequestException('Referrer header not sent');
-                }
-
                 return new RedirectResponse($httpReferrer, 302);
             },
             array(
-                __CLASS__ => array('enabled' => false),
                 'fkooman\Rest\Plugin\Authentication\AuthenticationPlugin' => array('enabled' => false),
             )
         );
@@ -134,28 +117,13 @@ class FormAuthentication implements AuthenticationPluginInterface
                 return new RedirectResponse($redirectTo, 302);
             },
             array(
-                __CLASS__ => array('enabled' => false),
                 'fkooman\Rest\Plugin\Authentication\AuthenticationPlugin' => array('enabled' => false),
             )
         );
     }
 
-    public function execute(Request $request, array $routeConfig)
+    public function requestAuthentication(Request $request)
     {
-        $userId = $this->session->get('userName');
-        if (null !== $userId) {
-            return new FormUserInfo($userId);
-        }
-
-        // check if authentication is required...
-        if (array_key_exists('require', $routeConfig)) {
-            if (!$routeConfig['require']) {
-                // not required, so do not bother anymore
-                return;
-            }
-        }
-
-        // required, but not yet authenticated, show auth dialog 
         $response = new Response(200);  // XXX use 401 instead?
         $response->setHeader('X-Frame-Options', 'DENY');
         $response->setHeader('Content-Security-Policy', "default-src 'self'");

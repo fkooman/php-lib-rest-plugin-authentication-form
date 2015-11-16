@@ -22,26 +22,28 @@ use PHPUnit_Framework_TestCase;
 use fkooman\Rest\Plugin\Authentication\Form\Test\TestTemplateManager;
 use fkooman\Http\Request;
 use fkooman\Rest\Service;
+use fkooman\Rest\Plugin\Authentication\AuthenticationPlugin;
 
 class FormAuthenticationTest extends PHPUnit_Framework_TestCase
 {
-    public function testNotAuthenticated()
+    public function testAuth()
     {
-        $tpl = new TestTemplateManager();
-        $formAuth = new FormAuthentication(
-            function ($userId) {
-                return '$2y$10$L/pq7XXpV54.iAk2EE74deR4yR54yEaZb92.gxH2jDEAZkpcWbhiW'; // bar   
-            },
-            $tpl
+        $request = new Request(
+            array(
+                'SERVER_NAME' => 'www.example.org',
+                'SERVER_PORT' => 80,
+                'QUERY_STRING' => '',
+                'REQUEST_URI' => '/',
+                'SCRIPT_NAME' => '/index.php',
+                'REQUEST_METHOD' => 'GET',
+            )
         );
-
-        $sessionStub = $this->getMockBuilder('fkooman\Http\Session')
-                     ->disableOriginalConstructor()
-                     ->getMock();
-        $sessionStub->method('get')->will($this->returnValue(null));
-        $formAuth->setSession($sessionStub);
-        $formAuth->init(new Service());
-
+        $formAuth = $this->getFormAuth('foo');
+        $this->assertEquals('foo', $formAuth->isAuthenticated($request)->getUserId());
+    }
+    
+    public function testAuthNotAuthenticated()
+    {
         $request = new Request(
             array(
                 'SERVER_NAME' => 'www.example.org',
@@ -52,7 +54,9 @@ class FormAuthenticationTest extends PHPUnit_Framework_TestCase
                 'REQUEST_METHOD' => 'GET',
             )
         );
-        $response = $formAuth->execute($request, array());
+        $formAuth = $this->getFormAuth(null);
+        $this->assertFalse($formAuth->isAuthenticated($request));
+        $response = $formAuth->requestAuthentication($request);
         $this->assertSame(
             array(
                 'HTTP/1.1 200 OK',
@@ -67,31 +71,17 @@ class FormAuthenticationTest extends PHPUnit_Framework_TestCase
         );
     }
 
-    public function testAuthenticationAttemptWithoutReferrer()
+    public function testVerifyCorrectCredentials()
     {
-        $tpl = new TestTemplateManager();
-        $formAuth = new FormAuthentication(
-            function ($userId) {
-                return '$2y$10$L/pq7XXpV54.iAk2EE74deR4yR54yEaZb92.gxH2jDEAZkpcWbhiW'; // bar
-            },
-            $tpl
-        );
-        $sessionStub = $this->getMockBuilder('fkooman\Http\Session')
-                     ->disableOriginalConstructor()
-                     ->getMock();
-        $sessionStub->method('get')->will($this->returnValue(null));
-        $formAuth->setSession($sessionStub);
-
-        $service = new Service();
-        $formAuth->init($service);
-
         $request = new Request(
             array(
                 'SERVER_NAME' => 'www.example.org',
                 'SERVER_PORT' => 80,
+                'HTTP_ACCEPT' => 'text/html',
                 'QUERY_STRING' => '',
                 'REQUEST_URI' => '/_auth/form/verify',
                 'SCRIPT_NAME' => '/index.php',
+                'HTTP_REFERER' => 'http://www.example.org/',
                 'PATH_INFO' => '/_auth/form/verify',
                 'REQUEST_METHOD' => 'POST',
             ),
@@ -100,153 +90,12 @@ class FormAuthenticationTest extends PHPUnit_Framework_TestCase
                 'userPass' => 'bar',
             )
         );
-
-        $response = $service->run($request);
-
-        $this->assertSame(
-            array(
-                'HTTP/1.1 400 Bad Request',
-                'Content-Type: application/json',
-                'Content-Length: 36',
-                '',
-                '{"error":"Referrer header not sent"}',
-            ),
-            $response->toArray()
-        );
-    }
-
-    public function testAuthenticationAttempt()
-    {
-        $tpl = new TestTemplateManager();
-        $formAuth = new FormAuthentication(
-            function ($userId) {
-                return '$2y$10$L/pq7XXpV54.iAk2EE74deR4yR54yEaZb92.gxH2jDEAZkpcWbhiW'; // bar
-            },
-            $tpl
-        );
-        $sessionStub = $this->getMockBuilder('fkooman\Http\Session')
-                     ->disableOriginalConstructor()
-                     ->getMock();
-        $sessionStub->method('get')->will($this->returnValue(null));
-        $formAuth->setSession($sessionStub);
-
         $service = new Service();
-        $formAuth->init($service);
-
-        $request = new Request(
-            array(
-                'SERVER_NAME' => 'www.example.org',
-                'SERVER_PORT' => 80,
-                'QUERY_STRING' => '',
-                'REQUEST_URI' => '/_auth/form/verify',
-                'SCRIPT_NAME' => '/index.php',
-                'PATH_INFO' => '/_auth/form/verify',
-                'REQUEST_METHOD' => 'POST',
-                'HTTP_REFERER' => 'https://app.example.org/',
-            ),
-            array(
-                'userName' => 'foo',
-                'userPass' => 'bar',
-            )
-        );
-
+        $formAuth = $this->getFormAuth(null);
+        $ap = new AuthenticationPlugin();
+        $ap->register($formAuth, 'form');
+        $service->getPluginRegistry()->registerDefaultPlugin($ap);
         $response = $service->run($request);
-
-        $this->assertSame(
-            array(
-                'HTTP/1.1 302 Found',
-                'Content-Type: text/html;charset=UTF-8',
-                'Location: https://app.example.org/',
-                '',
-                '',
-            ),
-            $response->toArray()
-        );
-    }
-
-    public function testAuthenticationAttemptWrongPassword()
-    {
-        $tpl = new TestTemplateManager();
-        $formAuth = new FormAuthentication(
-            function ($userId) {
-                return '$2y$10$L/pq7XXpV54.iAk2EE74deR4yR54yEaZb92.gxH2jDEAZkpcWbhiW'; // bar
-            },
-            $tpl
-        );
-        $sessionStub = $this->getMockBuilder('fkooman\Http\Session')
-                     ->disableOriginalConstructor()
-                     ->getMock();
-        $sessionStub->method('get')->will($this->returnValue(null));
-        $formAuth->setSession($sessionStub);
-
-        $service = new Service();
-        $formAuth->init($service);
-
-        $request = new Request(
-            array(
-                'SERVER_NAME' => 'www.example.org',
-                'SERVER_PORT' => 80,
-                'QUERY_STRING' => '',
-                'REQUEST_URI' => '/_auth/form/verify',
-                'SCRIPT_NAME' => '/index.php',
-                'PATH_INFO' => '/_auth/form/verify',
-                'REQUEST_METHOD' => 'POST',
-                'HTTP_REFERER' => 'https://app.example.org/',
-            ),
-            array(
-                'userName' => 'foo',
-                'userPass' => 'wr0ng',
-            )
-        );
-
-        $response = $service->run($request);
-
-        $this->assertSame(
-            array(
-                'HTTP/1.1 401 Unauthorized',
-                'Content-Type: application/json',
-                'Content-Length: 84',
-                'Www-Authenticate: Form realm="Protected Resource"',
-                '',
-                '{"error":"invalid_credentials","error_description":"provided credentials not valid"}',
-            ),
-            $response->toArray()
-        );
-    }
-
-    public function testLogout()
-    {
-        $tpl = new TestTemplateManager();
-        $formAuth = new FormAuthentication(
-            function ($userId) {
-                return '$2y$10$L/pq7XXpV54.iAk2EE74deR4yR54yEaZb92.gxH2jDEAZkpcWbhiW'; // bar
-            },
-            $tpl
-        );
-        $sessionStub = $this->getMockBuilder('fkooman\Http\Session')
-                     ->disableOriginalConstructor()
-                     ->getMock();
-        $sessionStub->method('get')->will($this->returnValue('foo'));
-        $formAuth->setSession($sessionStub);
-
-        $service = new Service();
-        $formAuth->init($service);
-
-        $request = new Request(
-            array(
-                'SERVER_NAME' => 'www.example.org',
-                'SERVER_PORT' => 80,
-                'QUERY_STRING' => '',
-                'REQUEST_URI' => '/_auth/form/logout',
-                'SCRIPT_NAME' => '/index.php',
-                'PATH_INFO' => '/_auth/form/logout',
-                'REQUEST_METHOD' => 'POST',
-                'HTTP_REFERER' => 'https://app.example.org/',
-            )
-        );
-
-        $response = $service->run($request);
-
         $this->assertSame(
             array(
                 'HTTP/1.1 302 Found',
@@ -257,5 +106,130 @@ class FormAuthenticationTest extends PHPUnit_Framework_TestCase
             ),
             $response->toArray()
         );
+    }
+
+    public function testVerifyWrongUser()
+    {
+        $request = new Request(
+            array(
+                'SERVER_NAME' => 'www.example.org',
+                'SERVER_PORT' => 80,
+                'QUERY_STRING' => '',
+                'HTTP_ACCEPT' => 'text/html',
+                'REQUEST_URI' => '/_auth/form/verify',
+                'SCRIPT_NAME' => '/index.php',
+                'HTTP_REFERER' => 'http://www.example.org/',
+                'PATH_INFO' => '/_auth/form/verify',
+                'REQUEST_METHOD' => 'POST',
+            ),
+            array(
+                'userName' => 'fooz',
+                'userPass' => 'bar',
+            )
+        );
+        $service = new Service();
+        $formAuth = $this->getFormAuth(null);
+        $ap = new AuthenticationPlugin();
+        $ap->register($formAuth, 'form');
+        $service->getPluginRegistry()->registerDefaultPlugin($ap);
+        $response = $service->run($request);
+        $this->assertSame(
+            array(
+                'HTTP/1.1 302 Found',
+                'Content-Type: text/html;charset=UTF-8',
+                'Location: http://www.example.org/?_auth_form_verify=invalid_credentials',
+                '',
+                '',
+            ),
+            $response->toArray()
+        );
+    }
+
+    public function testVerifyWrongPass()
+    {
+        $request = new Request(
+            array(
+                'SERVER_NAME' => 'www.example.org',
+                'SERVER_PORT' => 80,
+                'QUERY_STRING' => '',
+                'HTTP_ACCEPT' => 'text/html',
+                'REQUEST_URI' => '/_auth/form/verify',
+                'SCRIPT_NAME' => '/index.php',
+                'HTTP_REFERER' => 'http://www.example.org/',
+                'PATH_INFO' => '/_auth/form/verify',
+                'REQUEST_METHOD' => 'POST',
+            ),
+            array(
+                'userName' => 'foo',
+                'userPass' => 'baz',
+            )
+        );
+        $service = new Service();
+        $formAuth = $this->getFormAuth(null);
+        $ap = new AuthenticationPlugin();
+        $ap->register($formAuth, 'form');
+        $service->getPluginRegistry()->registerDefaultPlugin($ap);
+        $response = $service->run($request);
+        $this->assertSame(
+            array(
+                'HTTP/1.1 302 Found',
+                'Content-Type: text/html;charset=UTF-8',
+                'Location: http://www.example.org/?_auth_form_verify=invalid_credentials',
+                '',
+                '',
+            ),
+            $response->toArray()
+        );
+    }
+
+    public function testLogout()
+    {
+        $request = new Request(
+            array(
+                'SERVER_NAME' => 'www.example.org',
+                'SERVER_PORT' => 80,
+                'QUERY_STRING' => '',
+                'HTTP_ACCEPT' => 'text/html',
+                'REQUEST_URI' => '/_auth/form/logout',
+                'SCRIPT_NAME' => '/index.php',
+                'PATH_INFO' => '/_auth/form/logout',
+                'REQUEST_METHOD' => 'POST',
+                'HTTP_REFERER' => 'http://www.example.org/',
+            )
+        );
+        $service = new Service();
+        $formAuth = $this->getFormAuth('foo');
+        $ap = new AuthenticationPlugin();
+        $ap->register($formAuth, 'form');
+        $service->getPluginRegistry()->registerDefaultPlugin($ap);
+        $response = $service->run($request);
+        $this->assertSame(
+            array(
+                'HTTP/1.1 302 Found',
+                'Content-Type: text/html;charset=UTF-8',
+                'Location: http://www.example.org/',
+                '',
+                '',
+            ),
+            $response->toArray()
+        );
+    }
+
+    private function getFormAuth($returnValue)
+    {
+        $formAuth = new FormAuthentication(
+            function ($userId) {
+                // foo:bar
+                return 'foo' === $userId ? '$2y$10$L/pq7XXpV54.iAk2EE74deR4yR54yEaZb92.gxH2jDEAZkpcWbhiW' : false;
+            },
+            new TestTemplateManager()
+        );
+        $sessionStub = $this->getMockBuilder('fkooman\Http\Session')
+                     ->disableOriginalConstructor()
+                     ->getMock();
+        $sessionStub->method('get')->will($this->returnValue($returnValue));
+        $formAuth->setSession($sessionStub);
+
+        return $formAuth;
     }
 }

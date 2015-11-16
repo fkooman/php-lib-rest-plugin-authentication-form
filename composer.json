@@ -11,7 +11,7 @@
             "fkooman\\Rest\\Plugin\\Authentication\\Form\\": "src/"
         }
     },
-    "description": "HTML Form Authentication plugin for fkooman/rest",
+    "description": "HTML Form Authentication plugin for fkooman/rest-plugin-authentication",
     "license": "Apache-2.0",
     "name": "fkooman/rest-plugin-authentication-form",
     "require": {
@@ -19,7 +19,7 @@
         "ext-spl": "*",
         "fkooman/http": "^1.1.0",
         "fkooman/rest": "^1.0.1",
-        "fkooman/rest-plugin-authentication": "^1.0.0",
+        "fkooman/rest-plugin-authentication": "dev-develop",
         "fkooman/tpl": "^2.0.0",
         "ircmaxell/password-compat": "~1.0",
         "php": ">=5.4"
