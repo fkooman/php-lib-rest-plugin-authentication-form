@@ -97,10 +97,10 @@ class FormAuthentication implements AuthenticationPluginInterface
 
                 $passHash = call_user_func($this->retrieveHash, $userName);
                 if (false === $passHash || !password_verify($userPass, $passHash)) {
-                    $this->session->set('authError', 'invalid_credentials');
+                    $this->session->set('invalidCredentials', 'yes');
                 } else {
                     $this->session->set('userName', $userName);
-                    $this->session->delete('authError');
+                    $this->session->delete('invalidCredentials');
                 }
 
                 return new RedirectResponse($httpReferrer, 302);
@@ -134,7 +134,7 @@ class FormAuthentication implements AuthenticationPluginInterface
                 'formAuth',
                 array(
                     'login_hint' => $request->getUrl()->getQueryParameter('login_hint'),
-                    'auth_error' => $this->session->get('authError'),
+                    'invalid_credentials' => 'yes' === $this->session->get('invalidCredentials') ? 'yes' : 'no',
                 )
             )
         );

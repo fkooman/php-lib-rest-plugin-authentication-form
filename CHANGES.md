@@ -1,6 +1,6 @@
 # Release History
 
-## 2.0.1 (...)
+## 2.1.0 (...)
 - finish ability to show credential error in template
 - improve session testing
 

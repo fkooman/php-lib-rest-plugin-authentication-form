@@ -70,9 +70,9 @@ class FormAuthenticationTest extends PHPUnit_Framework_TestCase
                 'Content-Type: text/html;charset=UTF-8',
                 'X-Frame-Options: DENY',
                 "Content-Security-Policy: default-src 'self'",
-                'Content-Length: 51',
+                'Content-Length: 60',
                 '',
-                '{"formAuth":{"login_hint":"foo","auth_error":null}}',
+                '{"formAuth":{"login_hint":"foo","invalid_credentials":"no"}}',
             ),
             $response->toArray()
         );
@@ -156,7 +156,7 @@ class FormAuthenticationTest extends PHPUnit_Framework_TestCase
             ),
             $response->toArray()
         );
-        $this->assertSame('invalid_credentials', $testSession->get('authError'));
+        $this->assertSame('yes', $testSession->get('invalidCredentials'));
         $response = $formAuth->requestAuthentication($request);
         $this->assertSame(
             array(
@@ -164,9 +164,9 @@ class FormAuthenticationTest extends PHPUnit_Framework_TestCase
                 'Content-Type: text/html;charset=UTF-8',
                 'X-Frame-Options: DENY',
                 "Content-Security-Policy: default-src 'self'",
-                'Content-Length: 67',
+                'Content-Length: 60',
                 '',
-                '{"formAuth":{"login_hint":null,"auth_error":"invalid_credentials"}}',
+                '{"formAuth":{"login_hint":null,"invalid_credentials":"yes"}}',
 
             ),
             $response->toArray()
@@ -211,7 +211,7 @@ class FormAuthenticationTest extends PHPUnit_Framework_TestCase
             ),
             $response->toArray()
         );
-        $this->assertSame('invalid_credentials', $testSession->get('authError'));
+        $this->assertSame('yes', $testSession->get('invalidCredentials'));
     }
 
     public function testLogout()
