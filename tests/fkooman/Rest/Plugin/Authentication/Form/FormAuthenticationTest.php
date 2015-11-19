@@ -70,9 +70,9 @@ class FormAuthenticationTest extends PHPUnit_Framework_TestCase
                 'Content-Type: text/html;charset=UTF-8',
                 'X-Frame-Options: DENY',
                 "Content-Security-Policy: default-src 'self'",
-                'Content-Length: 60',
+                'Content-Length: 85',
                 '',
-                '{"formAuth":{"login_hint":"foo","invalid_credentials":"no"}}',
+                '{"formAuth":{"login_hint":"foo","invalid_credentials":"no","invalid_user_name":null}}',
             ),
             $response->toArray()
         );
@@ -157,6 +157,7 @@ class FormAuthenticationTest extends PHPUnit_Framework_TestCase
             $response->toArray()
         );
         $this->assertSame('yes', $testSession->get('invalidCredentials'));
+        $this->assertSame('fooz', $testSession->get('invalidUserName'));
         $response = $formAuth->requestAuthentication($request);
         $this->assertSame(
             array(
@@ -164,9 +165,9 @@ class FormAuthenticationTest extends PHPUnit_Framework_TestCase
                 'Content-Type: text/html;charset=UTF-8',
                 'X-Frame-Options: DENY',
                 "Content-Security-Policy: default-src 'self'",
-                'Content-Length: 60',
+                'Content-Length: 87',
                 '',
-                '{"formAuth":{"login_hint":null,"invalid_credentials":"yes"}}',
+                '{"formAuth":{"login_hint":null,"invalid_credentials":"yes","invalid_user_name":"fooz"}}',
 
             ),
             $response->toArray()
