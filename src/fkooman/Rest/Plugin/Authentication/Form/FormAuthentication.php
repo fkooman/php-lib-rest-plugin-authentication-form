@@ -26,7 +26,6 @@ use fkooman\Tpl\TemplateManagerInterface;
 use fkooman\Http\Response;
 use fkooman\Http\RedirectResponse;
 use InvalidArgumentException;
-use fkooman\Http\Exception\UnauthorizedException;
 use fkooman\Http\Exception\BadRequestException;
 
 class FormAuthentication implements AuthenticationPluginInterface
@@ -98,11 +97,12 @@ class FormAuthentication implements AuthenticationPluginInterface
 
                 $passHash = call_user_func($this->retrieveHash, $userName);
                 if (false === $passHash || !password_verify($userPass, $passHash)) {
-                    // XXX: use proper query parameter appending, could also be '&'!
-                    return new RedirectResponse($httpReferrer . '?_auth_form_verify=invalid_credentials', 302);
+                    $this->session->set('authError', 'invalid_credentials');
+                } else {
+                    $this->session->set('userName', $userName);
+                    $this->session->delete('authError');
                 }
 
-                $this->session->set('userName', $userName);
                 return new RedirectResponse($httpReferrer, 302);
             },
             array(
@@ -134,6 +134,7 @@ class FormAuthentication implements AuthenticationPluginInterface
                 'formAuth',
                 array(
                     'login_hint' => $request->getUrl()->getQueryParameter('login_hint'),
+                    'auth_error' => $this->session->get('authError'),
                 )
             )
         );

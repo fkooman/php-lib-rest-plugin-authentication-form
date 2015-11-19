@@ -40,10 +40,13 @@ class FormAuthenticationTest extends PHPUnit_Framework_TestCase
                 'REQUEST_METHOD' => 'GET',
             )
         );
-        $formAuth = $this->getFormAuth('foo');
+        $formAuth = $this->getFormAuth();
+        $testSession = new TestSession();
+        $testSession->set('userName', 'foo');
+        $formAuth->setSession($testSession);
         $this->assertEquals('foo', $formAuth->isAuthenticated($request)->getUserId());
     }
-    
+
     public function testAuthNotAuthenticated()
     {
         $request = new Request(
@@ -56,7 +59,9 @@ class FormAuthenticationTest extends PHPUnit_Framework_TestCase
                 'REQUEST_METHOD' => 'GET',
             )
         );
-        $formAuth = $this->getFormAuth(null);
+        $formAuth = $this->getFormAuth();
+        $testSession = new TestSession();
+        $formAuth->setSession($testSession);
         $this->assertFalse($formAuth->isAuthenticated($request));
         $response = $formAuth->requestAuthentication($request);
         $this->assertSame(
@@ -65,12 +70,13 @@ class FormAuthenticationTest extends PHPUnit_Framework_TestCase
                 'Content-Type: text/html;charset=UTF-8',
                 'X-Frame-Options: DENY',
                 "Content-Security-Policy: default-src 'self'",
-                'Content-Length: 33',
+                'Content-Length: 51',
                 '',
-                '{"formAuth":{"login_hint":"foo"}}',
+                '{"formAuth":{"login_hint":"foo","auth_error":null}}',
             ),
             $response->toArray()
         );
+        $this->assertNull($testSession->get('userName'));
     }
 
     public function testVerifyCorrectCredentials()
@@ -93,7 +99,9 @@ class FormAuthenticationTest extends PHPUnit_Framework_TestCase
             )
         );
         $service = new Service();
-        $formAuth = $this->getFormAuth(null);
+        $formAuth = $this->getFormAuth();
+        $testSession = new TestSession();
+        $formAuth->setSession($testSession);
         $ap = new AuthenticationPlugin();
         $ap->register($formAuth, 'form');
         $service->getPluginRegistry()->registerDefaultPlugin($ap);
@@ -108,6 +116,7 @@ class FormAuthenticationTest extends PHPUnit_Framework_TestCase
             ),
             $response->toArray()
         );
+        $this->assertSame('foo', $testSession->get('userName'));
     }
 
     public function testVerifyWrongUser()
@@ -130,7 +139,9 @@ class FormAuthenticationTest extends PHPUnit_Framework_TestCase
             )
         );
         $service = new Service();
-        $formAuth = $this->getFormAuth(null);
+        $formAuth = $this->getFormAuth();
+        $testSession = new TestSession();
+        $formAuth->setSession($testSession);
         $ap = new AuthenticationPlugin();
         $ap->register($formAuth, 'form');
         $service->getPluginRegistry()->registerDefaultPlugin($ap);
@@ -139,12 +150,28 @@ class FormAuthenticationTest extends PHPUnit_Framework_TestCase
             array(
                 'HTTP/1.1 302 Found',
                 'Content-Type: text/html;charset=UTF-8',
-                'Location: http://www.example.org/?_auth_form_verify=invalid_credentials',
+                'Location: http://www.example.org/',
                 '',
                 '',
             ),
             $response->toArray()
         );
+        $this->assertSame('invalid_credentials', $testSession->get('authError'));
+        $response = $formAuth->requestAuthentication($request);
+        $this->assertSame(
+            array(
+                'HTTP/1.1 200 OK',
+                'Content-Type: text/html;charset=UTF-8',
+                'X-Frame-Options: DENY',
+                "Content-Security-Policy: default-src 'self'",
+                'Content-Length: 67',
+                '',
+                '{"formAuth":{"login_hint":null,"auth_error":"invalid_credentials"}}',
+
+            ),
+            $response->toArray()
+        );
+        $this->assertNull($testSession->get('userName'));
     }
 
     public function testVerifyWrongPass()
@@ -167,7 +194,9 @@ class FormAuthenticationTest extends PHPUnit_Framework_TestCase
             )
         );
         $service = new Service();
-        $formAuth = $this->getFormAuth(null);
+        $formAuth = $this->getFormAuth();
+        $testSession = new TestSession();
+        $formAuth->setSession($testSession);
         $ap = new AuthenticationPlugin();
         $ap->register($formAuth, 'form');
         $service->getPluginRegistry()->registerDefaultPlugin($ap);
@@ -176,12 +205,13 @@ class FormAuthenticationTest extends PHPUnit_Framework_TestCase
             array(
                 'HTTP/1.1 302 Found',
                 'Content-Type: text/html;charset=UTF-8',
-                'Location: http://www.example.org/?_auth_form_verify=invalid_credentials',
+                'Location: http://www.example.org/',
                 '',
                 '',
             ),
             $response->toArray()
         );
+        $this->assertSame('invalid_credentials', $testSession->get('authError'));
     }
 
     public function testLogout()
@@ -200,7 +230,10 @@ class FormAuthenticationTest extends PHPUnit_Framework_TestCase
             )
         );
         $service = new Service();
-        $formAuth = $this->getFormAuth('foo');
+        $formAuth = $this->getFormAuth();
+        $testSession = new TestSession();
+        $testSession->set('userName', 'foo');
+        $formAuth->setSession($testSession);
         $ap = new AuthenticationPlugin();
         $ap->register($formAuth, 'form');
         $service->getPluginRegistry()->registerDefaultPlugin($ap);
@@ -215,9 +248,10 @@ class FormAuthenticationTest extends PHPUnit_Framework_TestCase
             ),
             $response->toArray()
         );
+        $this->assertNull($testSession->get('userName'));
     }
 
-    private function getFormAuth($userName)
+    private function getFormAuth()
     {
         $formAuth = new FormAuthentication(
             function ($userId) {
@@ -226,9 +260,6 @@ class FormAuthenticationTest extends PHPUnit_Framework_TestCase
             },
             new TestTemplateManager()
         );
-
-        $testSession = new TestSession($userName);
-        $formAuth->setSession($testSession);
 
         return $formAuth;
     }

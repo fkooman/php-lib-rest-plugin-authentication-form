@@ -21,26 +21,40 @@ use fkooman\Http\SessionInterface;
 
 class TestSession implements SessionInterface
 {
-    private $userName;
+    /** var @array */
+    private $s;
 
-    public function __construct($userName)
+    public function __construct()
     {
-        $this->userName = $userName;
-    }
-    
-    public function set($key, $value) {
+        $this->s = array();
     }
 
-    public function delete($key) {
+    public function set($key, $value)
+    {
+        $this->s[$key] = $value;
     }
 
-    public function has($key) {
+    public function delete($key)
+    {
+        unset($this->s[$key]);
     }
 
-    public function get($key) {
-        return $this->userName;
+    public function has($key)
+    {
+        return array_key_exists($key, $this->s);
     }
 
-    public function destroy() {
+    public function get($key)
+    {
+        if (!$this->has($key)) {
+            return;
+        }
+
+        return $this->s[$key];
+    }
+
+    public function destroy()
+    {
+        $this->s = array();
     }
 }
