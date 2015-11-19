@@ -17,6 +17,7 @@
  */
 namespace fkooman\Rest\Plugin\Authentication\Form;
 
+use fkooman\Http\SessionInterface;
 use fkooman\Http\Session;
 use fkooman\Http\Request;
 use fkooman\Rest\Service;
@@ -36,7 +37,7 @@ class FormAuthentication implements AuthenticationPluginInterface
     /** @var \fkooman\Tpl\TemplateManagerInterface */
     private $templateManager;
 
-    /** @var \fkooman\Http\Session */
+    /** @var \fkooman\Http\SessionInterface */
     private $session;
 
     /** @var array */
@@ -59,7 +60,7 @@ class FormAuthentication implements AuthenticationPluginInterface
         $this->authParams = $authParams;
     }
 
-    public function setSession(Session $session)
+    public function setSession(SessionInterface $session)
     {
         $this->session = $session;
     }
@@ -76,6 +77,7 @@ class FormAuthentication implements AuthenticationPluginInterface
     public function init(Service $service)
     {
         if (null === $this->session) {
+            // XXX idealy we want to get rid of this...
             $this->session = new Session('Form');
         }
 

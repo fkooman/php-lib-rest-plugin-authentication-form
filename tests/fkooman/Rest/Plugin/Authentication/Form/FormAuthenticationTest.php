@@ -17,9 +17,11 @@
 namespace fkooman\Rest\Plugin\Authentication\Form;
 
 require_once __DIR__.'/Test/TestTemplateManager.php';
+require_once __DIR__.'/Test/TestSession.php';
 
 use PHPUnit_Framework_TestCase;
 use fkooman\Rest\Plugin\Authentication\Form\Test\TestTemplateManager;
+use fkooman\Rest\Plugin\Authentication\Form\Test\TestSession;
 use fkooman\Http\Request;
 use fkooman\Rest\Service;
 use fkooman\Rest\Plugin\Authentication\AuthenticationPlugin;
@@ -215,7 +217,7 @@ class FormAuthenticationTest extends PHPUnit_Framework_TestCase
         );
     }
 
-    private function getFormAuth($returnValue)
+    private function getFormAuth($userName)
     {
         $formAuth = new FormAuthentication(
             function ($userId) {
@@ -224,11 +226,9 @@ class FormAuthenticationTest extends PHPUnit_Framework_TestCase
             },
             new TestTemplateManager()
         );
-        $sessionStub = $this->getMockBuilder('fkooman\Http\Session')
-                     ->disableOriginalConstructor()
-                     ->getMock();
-        $sessionStub->method('get')->will($this->returnValue($returnValue));
-        $formAuth->setSession($sessionStub);
+
+        $testSession = new TestSession($userName);
+        $formAuth->setSession($testSession);
 
         return $formAuth;
     }
