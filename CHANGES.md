@@ -1,8 +1,10 @@
 # Release History
 
-## 2.1.0 (...)
+## 3.0.0 (...)
 - finish ability to show credential error in template
-- improve session testing
+- improved session testing
+- major cleanups
+- API change for contructing the object and for template integration
 
 ## 2.0.0 (2015-11-19)
 - major API update for new `fkooman/rest-plugin-authentication`

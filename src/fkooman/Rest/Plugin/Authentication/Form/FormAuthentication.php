@@ -25,7 +25,6 @@ use fkooman\Rest\Plugin\Authentication\AuthenticationPluginInterface;
 use fkooman\Tpl\TemplateManagerInterface;
 use fkooman\Http\Response;
 use fkooman\Http\RedirectResponse;
-use InvalidArgumentException;
 use fkooman\Http\Exception\BadRequestException;
 
 class FormAuthentication implements AuthenticationPluginInterface
@@ -39,47 +38,28 @@ class FormAuthentication implements AuthenticationPluginInterface
     /** @var \fkooman\Http\SessionInterface */
     private $session;
 
-    /** @var array */
-    private $authParams;
-
-    public function __construct($retrieveHash, TemplateManagerInterface $templateManager, array $authParams = array())
+    public function __construct(callable $retrieveHash, TemplateManagerInterface $templateManager, SessionInterface $session = null)
     {
-        if (!is_callable($retrieveHash)) {
-            throw new InvalidArgumentException('argument must be callable');
-        }
         $this->retrieveHash = $retrieveHash;
-
         $this->templateManager = $templateManager;
-
-        $this->session = null;
-
-        if (!array_key_exists('realm', $authParams)) {
-            $authParams['realm'] = 'Protected Resource';
+        if (is_null($session)) {
+            $session = new Session('form');
         }
-        $this->authParams = $authParams;
-    }
-
-    public function setSession(SessionInterface $session)
-    {
         $this->session = $session;
     }
 
     public function isAuthenticated(Request $request)
     {
-        if (null !== $this->session->get('userName')) {
-            return new FormUserInfo($this->session->get('userName'));
+        $authFormUserName = $this->session->get('_auth_form_user_name');
+        if (is_null($authFormUserName)) {
+            return false;
         }
 
-        return false;
+        return new FormUserInfo($authFormUserName);
     }
 
     public function init(Service $service)
     {
-        if (null === $this->session) {
-            // XXX idealy we want to get rid of this...
-            $this->session = new Session('Form');
-        }
-
         $service->post(
             '/_auth/form/verify',
             function (Request $request) {
@@ -89,7 +69,9 @@ class FormAuthentication implements AuthenticationPluginInterface
                 }
 
                 // delete possibly stale auth session
-                $this->session->delete('userName');
+                $this->session->delete('_auth_form_user_name');
+                $this->session->delete('_auth_form_invalid_credentials');
+                $this->session->delete('_auth_form_invalid_user_name');
 
                 // validate password
                 $userName = $request->getPostParameter('userName');
@@ -97,12 +79,12 @@ class FormAuthentication implements AuthenticationPluginInterface
 
                 $passHash = call_user_func($this->retrieveHash, $userName);
                 if (false === $passHash || !password_verify($userPass, $passHash)) {
-                    $this->session->set('invalidCredentials', 'yes');
-                    $this->session->set('invalidUserName', $userName);
+                    $this->session->set('_auth_form_invalid_credentials', true);
+                    $this->session->set('_auth_form_invalid_user_name', $userName);
                 } else {
-                    $this->session->set('userName', $userName);
-                    $this->session->delete('invalidCredentials');
-                    $this->session->delete('invalidUserName');
+                    $this->session->set('_auth_form_user_name', $userName);
+                    $this->session->delete('_auth_form_invalid_credentials');
+                    $this->session->delete('_auth_form_invalid_user_name');
                 }
 
                 return new RedirectResponse($httpReferrer, 302);
@@ -116,7 +98,10 @@ class FormAuthentication implements AuthenticationPluginInterface
             '/_auth/form/logout',
             function (Request $request) {
                 $this->session->destroy();
-                $redirectTo = self::validateRedirectTo($request->getUrl()->getRootUrl(), $request->getPostParameter('redirect_to'));
+
+                $rootUrl = $request->getUrl()->getRootUrl();
+                $redirectToParameter = $request->getPostParameter('redirect_to');
+                $redirectTo = self::validateRedirectTo($rootUrl, $redirectToParameter);
 
                 return new RedirectResponse($redirectTo, 302);
             },
@@ -128,7 +113,7 @@ class FormAuthentication implements AuthenticationPluginInterface
 
     public function requestAuthentication(Request $request)
     {
-        $response = new Response(200);  // XXX use 401 instead?
+        $response = new Response(200);
         $response->setHeader('X-Frame-Options', 'DENY');
         $response->setHeader('Content-Security-Policy', "default-src 'self'");
         $response->setBody(
@@ -136,8 +121,8 @@ class FormAuthentication implements AuthenticationPluginInterface
                 'formAuth',
                 array(
                     'login_hint' => $request->getUrl()->getQueryParameter('login_hint'),
-                    'invalid_credentials' => 'yes' === $this->session->get('invalidCredentials') ? 'yes' : 'no',
-                    'invalid_user_name' => $this->session->get('invalidUserName'),
+                    '_auth_form_invalid_credentials' => $this->session->get('_auth_form_invalid_credentials'),
+                    '_auth_form_invalid_user_name' => $this->session->get('_auth_form_invalid_user_name'),
                 )
             )
         );
@@ -145,27 +130,17 @@ class FormAuthentication implements AuthenticationPluginInterface
         return $response;
     }
 
-    private static function validateRedirectTo($rootUrl, $redirectTo)
+    private static function validateRedirectTo($rootUrl, $redirectToParameter)
     {
-        // no redirectTo specified
-        if (null === $redirectTo) {
-            $redirectTo = $rootUrl;
+        if (is_null($redirectToParameter)) {
+            return $rootUrl;
         }
 
-        // if redirectTo starts with a '/' append it to rootUrl
-        if (0 === strpos($redirectTo, '/')) {
-            $redirectTo = $rootUrl.substr($redirectTo, 1);
+        // MUST be valid absolute URL
+        if (false === filter_var($redirectToParameter, FILTER_VALIDATE_URL)) {
+            throw new BadRequestException('invalid redirect_to URL');
         }
 
-        if (false === filter_var($redirectTo, FILTER_VALIDATE_URL)) {
-            throw new BadRequestException(sprintf('invalid redirect_to URL "%s"', $redirectTo));
-        }
-
-        // URL needs to start with absRoot
-        if (0 !== strpos($redirectTo, $rootUrl)) {
-            throw new BadRequestException('redirect_to needs to point to a URL relative to the application root');
-        }
-
-        return $redirectTo;
+        return $redirectToParameter;
     }
 }
