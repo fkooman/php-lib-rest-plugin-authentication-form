@@ -1,6 +1,6 @@
 # Release History
 
-## 3.0.0 (...)
+## 3.0.0 (2015-11-20)
 - finish ability to show credential error in template
 - improved session testing
 - major cleanups
