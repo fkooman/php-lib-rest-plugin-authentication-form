@@ -47,6 +47,24 @@ class FormAuthenticationTest extends PHPUnit_Framework_TestCase
         $this->assertEquals('foo', $formAuth->isAuthenticated($request)->getUserId());
     }
 
+    public function testAuthNonMatchingLoginHint()
+    {
+        $request = new Request(
+            array(
+                'SERVER_NAME' => 'www.example.org',
+                'SERVER_PORT' => 80,
+                'QUERY_STRING' => 'login_hint=bar',
+                'REQUEST_URI' => '/?login_hint=bar',
+                'SCRIPT_NAME' => '/index.php',
+                'REQUEST_METHOD' => 'GET',
+            )
+        );
+        $testSession = new TestSession();
+        $testSession->set('_auth_form_user_name', 'foo');
+        $formAuth = $this->getFormAuth($testSession);
+        $this->assertFalse($formAuth->isAuthenticated($request));
+    }
+
     public function testAuthNotAuthenticated()
     {
         $request = new Request(

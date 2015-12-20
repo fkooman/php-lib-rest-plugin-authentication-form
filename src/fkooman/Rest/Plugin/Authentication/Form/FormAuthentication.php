@@ -55,6 +55,14 @@ class FormAuthentication implements AuthenticationPluginInterface
             return false;
         }
 
+        // enforce the login_hint
+        $loginHint = $request->getUrl()->getQueryParameter('login_hint');
+        if (null !== $loginHint) {
+            if ($authFormUserName !== $loginHint) {
+                return false;
+            }
+        }
+
         return new FormUserInfo($authFormUserName);
     }
 
