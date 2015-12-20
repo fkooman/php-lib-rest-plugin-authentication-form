@@ -1,6 +1,6 @@
 # Release History
 
-## 3.0.1 (...)
+## 3.0.1 (2015-12-20)
 - if `login_hint` does not match currently logged in user, do not silently
   continue with the already logged in user (issue #1)
 
