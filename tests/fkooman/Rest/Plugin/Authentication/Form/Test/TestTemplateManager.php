@@ -24,6 +24,12 @@ class TestTemplateManager implements TemplateManagerInterface
 {
     public function setDefault(array $templateVariables)
     {
+        // NOP
+    }
+
+    public function addDefault(array $templateVariables)
+    {
+        // NOP
     }
 
     public function render($templateName, array $templateVariables = array())

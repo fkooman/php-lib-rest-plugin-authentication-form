@@ -1,5 +1,9 @@
 # Release History
 
+## 3.0.2 (2016-03-07)
+- fix running test on newer versions of `fkooman/tpl` dealing with 
+  breaking API
+
 ## 3.0.1 (2015-12-20)
 - if `login_hint` does not match currently logged in user, do not silently
   continue with the already logged in user (issue #1)
