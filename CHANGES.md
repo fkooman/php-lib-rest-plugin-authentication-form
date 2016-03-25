@@ -1,5 +1,8 @@
 # Release History
 
+## 3.0.3 (2016-03-25)
+- update `fkooman/json`
+
 ## 3.0.2 (2016-03-07)
 - fix running test on newer versions of `fkooman/tpl` dealing with 
   breaking API

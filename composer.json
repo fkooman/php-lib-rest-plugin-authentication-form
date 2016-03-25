@@ -25,6 +25,6 @@
         "php": ">=5.4"
     },
     "require-dev": {
-        "fkooman/json": "^1.0.0"
+        "fkooman/json": "^2.0.0"
     }
 }
