@@ -1,5 +1,9 @@
 # Release History
 
+## 3.0.4 (2016-04-12)
+- no longer destroy the session, but just delete all authentication 
+  keys
+
 ## 3.0.3 (2016-03-25)
 - update `fkooman/json`
 

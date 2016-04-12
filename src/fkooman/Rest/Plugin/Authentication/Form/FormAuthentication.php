@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 namespace fkooman\Rest\Plugin\Authentication\Form;
 
 use fkooman\Http\SessionInterface;
@@ -105,7 +106,10 @@ class FormAuthentication implements AuthenticationPluginInterface
         $service->post(
             '/_auth/form/logout',
             function (Request $request) {
-                $this->session->destroy();
+                // delete all authentication information
+                $this->session->delete('_auth_form_user_name');
+                $this->session->delete('_auth_form_invalid_credentials');
+                $this->session->delete('_auth_form_invalid_user_name');
 
                 $rootUrl = $request->getUrl()->getRootUrl();
                 $redirectToParameter = $request->getPostParameter('redirect_to');
