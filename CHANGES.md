@@ -1,5 +1,8 @@
 # Release History
 
+## 4.0.0 (2016-08-19)
+- update `fkooman/rest` and `fkooman/http` dependencies
+
 ## 3.0.4 (2016-04-12)
 - no longer destroy the session, but just delete all authentication 
   keys
