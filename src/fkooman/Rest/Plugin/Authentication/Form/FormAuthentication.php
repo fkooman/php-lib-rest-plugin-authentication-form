@@ -18,15 +18,17 @@
 
 namespace fkooman\Rest\Plugin\Authentication\Form;
 
-use fkooman\Http\SessionInterface;
-use fkooman\Http\Session;
-use fkooman\Http\Request;
-use fkooman\Rest\Service;
-use fkooman\Rest\Plugin\Authentication\AuthenticationPluginInterface;
-use fkooman\Tpl\TemplateManagerInterface;
-use fkooman\Http\Response;
-use fkooman\Http\RedirectResponse;
 use fkooman\Http\Exception\BadRequestException;
+use fkooman\Http\RedirectResponse;
+use fkooman\Http\Request;
+use fkooman\Http\Response;
+use fkooman\Http\Session;
+use fkooman\Http\SessionInterface;
+use fkooman\Rest\Plugin\Authentication\AuthenticationPluginInterface;
+use fkooman\Rest\Service;
+use fkooman\Tpl\TemplateManagerInterface;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 class FormAuthentication implements AuthenticationPluginInterface
 {
@@ -39,7 +41,10 @@ class FormAuthentication implements AuthenticationPluginInterface
     /** @var \fkooman\Http\SessionInterface */
     private $session;
 
-    public function __construct(callable $retrieveHash, TemplateManagerInterface $templateManager, SessionInterface $session = null)
+    /** @var \Psr\LoggerInterface */
+    private $logger;
+
+    public function __construct(callable $retrieveHash, TemplateManagerInterface $templateManager, SessionInterface $session = null, LoggerInterface $logger = null)
     {
         $this->retrieveHash = $retrieveHash;
         $this->templateManager = $templateManager;
@@ -47,6 +52,10 @@ class FormAuthentication implements AuthenticationPluginInterface
             $session = new Session('form');
         }
         $this->session = $session;
+        if (is_null($logger)) {
+            $logger = new NullLogger();
+        }
+        $this->logger = $logger;
     }
 
     public function isAuthenticated(Request $request)
@@ -88,6 +97,7 @@ class FormAuthentication implements AuthenticationPluginInterface
 
                 $passHash = call_user_func($this->retrieveHash, $userName);
                 if (false === $passHash || !password_verify($userPass, $passHash)) {
+                    $this->logger->error(sprintf('invalid credentials for "%s"', $userName));
                     $this->session->set('_auth_form_invalid_credentials', true);
                     $this->session->set('_auth_form_invalid_user_name', $userName);
                 } else {
@@ -98,9 +108,9 @@ class FormAuthentication implements AuthenticationPluginInterface
 
                 return new RedirectResponse($httpReferrer, 302);
             },
-            array(
-                'fkooman\Rest\Plugin\Authentication\AuthenticationPlugin' => array('enabled' => false),
-            )
+            [
+                'fkooman\Rest\Plugin\Authentication\AuthenticationPlugin' => ['enabled' => false],
+            ]
         );
 
         $service->post(
@@ -117,9 +127,9 @@ class FormAuthentication implements AuthenticationPluginInterface
 
                 return new RedirectResponse($redirectTo, 302);
             },
-            array(
-                'fkooman\Rest\Plugin\Authentication\AuthenticationPlugin' => array('enabled' => false),
-            )
+            [
+                'fkooman\Rest\Plugin\Authentication\AuthenticationPlugin' => ['enabled' => false],
+            ]
         );
     }
 
@@ -131,11 +141,11 @@ class FormAuthentication implements AuthenticationPluginInterface
         $response->setBody(
             $this->templateManager->render(
                 'formAuth',
-                array(
+                [
                     'login_hint' => $request->getUrl()->getQueryParameter('login_hint'),
                     '_auth_form_invalid_credentials' => $this->session->get('_auth_form_invalid_credentials'),
                     '_auth_form_invalid_user_name' => $this->session->get('_auth_form_invalid_user_name'),
-                )
+                ]
             )
         );
 

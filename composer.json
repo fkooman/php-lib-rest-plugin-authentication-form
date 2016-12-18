@@ -22,7 +22,8 @@
         "fkooman/rest-plugin-authentication": "^3.0.0",
         "fkooman/tpl": "^2.0.0",
         "ircmaxell/password-compat": "~1.0",
-        "php": ">=5.4"
+        "php": ">=5.4",
+        "psr/log": "^1.0"
     },
     "require-dev": {
         "fkooman/json": "^2.0.0"
