@@ -18,8 +18,8 @@
 
 namespace fkooman\Rest\Plugin\Authentication\Form\Test;
 
-use fkooman\Tpl\TemplateManagerInterface;
 use fkooman\Json\Json;
+use fkooman\Tpl\TemplateManagerInterface;
 
 class TestTemplateManager implements TemplateManagerInterface
 {
@@ -33,12 +33,12 @@ class TestTemplateManager implements TemplateManagerInterface
         // NOP
     }
 
-    public function render($templateName, array $templateVariables = array())
+    public function render($templateName, array $templateVariables = [])
     {
         return Json::encode(
-            array(
+            [
                 $templateName => $templateVariables,
-            )
+            ]
         );
     }
 }
