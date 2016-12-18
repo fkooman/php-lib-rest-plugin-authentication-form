@@ -1,5 +1,8 @@
 # Release History
 
+## 4.1.0 (2016-12-18)
+- implement Logger
+
 ## 4.0.0 (2016-08-19)
 - update `fkooman/rest` and `fkooman/http` dependencies
 
