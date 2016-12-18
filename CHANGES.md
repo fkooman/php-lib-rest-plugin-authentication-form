@@ -1,5 +1,8 @@
 # Release History
 
+## 4.1.1 (2016-12-18)
+- notice, not error for failed authentication
+
 ## 4.1.0 (2016-12-18)
 - implement Logger
 

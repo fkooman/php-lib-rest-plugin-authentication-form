@@ -97,7 +97,7 @@ class FormAuthentication implements AuthenticationPluginInterface
 
                 $passHash = call_user_func($this->retrieveHash, $userName);
                 if (false === $passHash || !password_verify($userPass, $passHash)) {
-                    $this->logger->error(sprintf('invalid credentials for "%s"', $userName));
+                    $this->logger->notice(sprintf('invalid credentials for user "%s"', $userName));
                     $this->session->set('_auth_form_invalid_credentials', true);
                     $this->session->set('_auth_form_invalid_user_name', $userName);
                 } else {
